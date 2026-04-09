@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: linux-x86_64
+            cmake_flags: "-DSTATIC_BUILD=ON"
+          - os: ubuntu-24.04-arm
+            target: linux-aarch64
+            cmake_flags: "-DSTATIC_BUILD=ON"
+          - os: macos-latest
+            target: darwin-aarch64
+            cmake_flags: ""
+          - os: macos-15
+            target: darwin-x86_64
+            cmake_flags: "-DCMAKE_OSX_ARCHITECTURES=x86_64"
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ musl-tools
+
+      - name: Build
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_flags }}
+          cmake --build build --config Release
+
+      - name: Rename binary
+        run: |
+          cp build/ports ports-${{ matrix.target }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ports-${{ matrix.target }}
+          path: ports-${{ matrix.target }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/ports-linux-x86_64/ports-linux-x86_64
+            artifacts/ports-linux-aarch64/ports-linux-aarch64
+            artifacts/ports-darwin-x86_64/ports-darwin-x86_64
+            artifacts/ports-darwin-aarch64/ports-darwin-aarch64
+            install.sh
+          generate_release_notes: true

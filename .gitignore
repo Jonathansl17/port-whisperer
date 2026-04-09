@@ -1,0 +1,21 @@
+# Build
+build/
+cmake-build-*/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+compile_commands.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Binaries
+ports
+whoisonport
+*.o
+*.a
