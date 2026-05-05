@@ -13,6 +13,7 @@
 #include <signal.h>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <unistd.h>
 
 #include <fmt/format.h>
@@ -107,6 +108,9 @@ std::vector<ProcessInfo> get_all_processes() {
     std::set<pid_t> seen;
     pid_t my_pid = getpid();
 
+    unsigned int ncpu = std::thread::hardware_concurrency();
+    if (ncpu == 0) ncpu = 1;
+
     std::istringstream iss(raw);
     std::string line;
     while (std::getline(iss, line)) {
@@ -123,7 +127,7 @@ std::vector<ProcessInfo> get_all_processes() {
         entries.push_back({
             .pid = pid,
             .process_name = pname,
-            .cpu = std::stod(m[2]),
+            .cpu = std::stod(m[2]) / ncpu,
             .mem_percent = std::stod(m[3]),
             .rss = std::stoull(m[4]),
             .lstart = fmt::format("{} {} {} {}", m[5].str(), m[6].str(), m[7].str(), m[8].str()),
